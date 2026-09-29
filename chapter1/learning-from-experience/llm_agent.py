@@ -17,11 +17,17 @@ from game_environment import TreasureHuntGame
 
 
 def _reasoning_safe_temperature(model, requested=1.0):
-    """Reasoning models (Kimi K3, GPT-5, ...) only accept temperature=1.
-    Return 1 for those; otherwise the requested value so non-reasoning
-    providers (Doubao, DeepSeek, older Moonshot) are unchanged."""
+    """Reasoning models (Kimi K3 / Kimi Code 模型, GPT-5, ...) only accept
+    temperature=1. Return 1 for those; otherwise the requested value so
+    non-reasoning providers (Doubao, DeepSeek, older Moonshot) are unchanged."""
     m = str(model or "").lower().replace("/", "-")
-    return 1 if ("kimi-k3" in m or "gpt-5" in m) else requested
+    fixed_at_one = (
+        m.startswith("k3")           # Kimi Code: k3 / k3-256k
+        or "kimi-k3" in m            # Kimi 开放平台 kimi-k3
+        or "kimi-for-coding" in m    # Kimi Code: kimi-for-coding(-highspeed)
+        or "gpt-5" in m
+    )
+    return 1 if fixed_at_one else requested
 
 
 # Provider resolution lives in the shared agentbook package so every chapter

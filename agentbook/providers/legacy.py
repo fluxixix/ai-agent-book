@@ -20,16 +20,44 @@ two code paths cannot drift apart on the part that matters.
 
 from __future__ import annotations
 
+import os
+
 from .openrouter import ZERO_COST_HINT, openrouter_key
+from .registry import lookup
 from .resolution import build_openrouter_backend
 
 __all__ = ["resolve_llm_backend"]
 
 _NO_KEY_MESSAGE = (
     "No API key found. Set a provider key (DASHSCOPE_API_KEY / SILICONFLOW_API_KEY / ARK_API_KEY / "
-    "MOONSHOT_API_KEY / DEEPSEEK_API_KEY / ZHIPU_API_KEY / OPENAI_API_KEY / "
+    "MOONSHOT_API_KEY / KIMI_CODE_API_KEY / DEEPSEEK_API_KEY / ZHIPU_API_KEY / OPENAI_API_KEY / "
     "GEMINI_API_KEY) or OPENROUTER_API_KEY (universal fallback). " + ZERO_COST_HINT
 )
+
+# Model ids that already exist on the Kimi Code endpoint (Kimi Code docs,
+# "模型 ID"): passed through untouched when the request lands there.
+_KIMI_CODE_MODELS = frozenset(
+    {"k3", "k3-256k", "kimi-for-coding", "kimi-for-coding-highspeed"}
+)
+
+
+def _map_model_to_kimi_coding(model: str | None) -> str:
+    """Translate a Kimi open-platform model id to its Kimi Code equivalent.
+
+    Args:
+        model: The id the caller asked for, e.g. the web-search agent's
+            ``kimi-k3`` default.
+
+    Returns:
+        An id the Kimi Code endpoint serves. Flagship requests map to
+        ``kimi-for-coding`` (K2.8 Preview) rather than ``k3``: it is the tier
+        every Kimi Code membership can call, so the fallback works out of the
+        box, and an explicit ``--model k3`` is honoured verbatim instead.
+    """
+    requested = (model or "").strip()
+    if requested in _KIMI_CODE_MODELS:
+        return requested
+    return "kimi-for-coding"
 
 
 def resolve_llm_backend(
@@ -45,10 +73,10 @@ def resolve_llm_backend(
 
     Args:
         primary_key: The caller's own API key. Falsy values trigger the
-            OpenRouter fallback.
+            Kimi Code and then the OpenRouter fallbacks.
         primary_base_url: Endpoint matching ``primary_key``.
-        model: Requested model id. Mapped to an OpenRouter id when the request
-            is rerouted, and passed through untouched otherwise.
+        model: Requested model id. Mapped to the target endpoint's id when the
+            request is rerouted, and passed through untouched otherwise.
 
     Returns:
         A plain ``(api_key, base_url, model, using_openrouter)`` tuple. Callers
@@ -56,8 +84,8 @@ def resolve_llm_backend(
         rather than becoming a :class:`~agentbook.providers.models.Backend`.
 
     Raises:
-        ValueError: If neither ``primary_key`` nor ``OPENROUTER_API_KEY`` is
-            set.
+        ValueError: If none of the caller's key, ``KIMI_CODE_API_KEY``, and
+            ``OPENROUTER_API_KEY`` is set.
     """
     fallback_key = openrouter_key()
 
@@ -68,6 +96,19 @@ def resolve_llm_backend(
 
     if primary_key:
         return primary_key, primary_base_url, model, False
+
+    # Kimi Code (membership subscription) outranks OpenRouter: it serves the
+    # same vendor's flagship behind a plan the reader may already pay for, so
+    # when only its key is configured it beats the aggregator.
+    coding_key = os.getenv("KIMI_CODE_API_KEY", "").strip()
+    if coding_key:
+        spec = lookup("kimi-coding")
+        return (
+            coding_key,
+            spec.resolved_base_url(),
+            _map_model_to_kimi_coding(model),
+            False,
+        )
 
     if fallback_key:
         return tuple(build_openrouter_backend(model, fallback_key))

@@ -83,7 +83,7 @@ def run_interactive_mode(agent: WebSearchAgent, output: Optional[str] = None):
                                       "trace": agent.get_trace(),
                                       "answer": answer,
                                       "api_turns": agent.get_api_turns(),
-                                      "provider": "openrouter" if agent.using_openrouter else "moonshot",
+                                      "provider": agent.provider,
                                       "model": agent.model,
                                       "base_url": agent.base_url})
 
@@ -192,7 +192,14 @@ def main(argv: Optional[list] = None):
 
     # 在线模式：需要 API Key
     api_key = Config.get_api_key(args.api_key)
-    if not api_key and not os.getenv("OPENROUTER_API_KEY"):
+    # KIMI_CODE_API_KEY（Kimi Code 会员端点）不在此处取值传给 Agent——传了会被
+    # 当作开放平台凭证发往 api.moonshot.cn。这里只判断“是否已配置”，让
+    # api_key=None 进入 WebSearchAgent，由其内部按注册表解析到 api.kimi.com。
+    if (
+        not api_key
+        and not os.getenv("OPENROUTER_API_KEY")
+        and not os.getenv("KIMI_CODE_API_KEY", "").strip()
+    ):
         Config.validate()
         print("提示：也可设置 OPENROUTER_API_KEY 作为通用兜底。")
         sys.exit(1)

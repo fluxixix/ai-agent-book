@@ -335,6 +335,7 @@ def test_shim_prefers_primary_key():
 
 
 def test_shim_falls_back_to_openrouter(monkeypatch):
+    monkeypatch.delenv("KIMI_CODE_API_KEY", raising=False)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key-5")
     key, base_url, model, using = resolve_llm_backend("", "https://example/v1", "kimi-k3")
     assert (key, using, model) == ("test-openrouter-key-5", True, "moonshotai/kimi-k2.6")
@@ -342,14 +343,51 @@ def test_shim_falls_back_to_openrouter(monkeypatch):
 
 
 def test_shim_falls_back_to_openrouter_default_model_when_model_is_none(monkeypatch):
+    monkeypatch.delenv("KIMI_CODE_API_KEY", raising=False)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key-6")
     key, base_url, model, using = resolve_llm_backend("", "https://example/v1", None)
     assert (key, using, model) == ("test-openrouter-key-6", True, OPENROUTER_DEFAULT_MODEL)
     assert base_url == "https://openrouter.ai/api/v1"
 
-def test_shim_raises_without_any_key():
+def test_shim_raises_without_any_key(monkeypatch):
+    monkeypatch.delenv("KIMI_CODE_API_KEY", raising=False)
     with pytest.raises(ValueError, match="OPENROUTER_API_KEY"):
         resolve_llm_backend("", "https://example/v1", "kimi-k3")
+
+
+# --- Kimi Code (membership endpoint) ----------------------------------------
+
+
+def test_kimi_coding_provider_resolves_directly(monkeypatch):
+    monkeypatch.setenv("KIMI_CODE_API_KEY", "test-kimi-code-key")
+    backend = resolve_backend("kimi-coding")
+    assert backend.base_url == "https://api.kimi.com/coding/v1"
+    assert backend.api_key == "test-kimi-code-key"
+    assert backend.model == "kimi-for-coding"
+    assert backend.using_openrouter is False
+
+
+def test_kimi_code_alias_selects_the_same_backend(monkeypatch):
+    monkeypatch.setenv("KIMI_CODE_API_KEY", "test-kimi-code-key")
+    assert resolve_backend("kimi-code").base_url == "https://api.kimi.com/coding/v1"
+
+
+def test_shim_falls_back_to_kimi_code_before_openrouter(monkeypatch):
+    """同厂商的会员端点优先于聚合器：只配置 KIMI_CODE_API_KEY 时不再兜底 OpenRouter。"""
+    monkeypatch.setenv("KIMI_CODE_API_KEY", "test-kimi-code-key")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key-7")
+    key, base_url, model, using = resolve_llm_backend("", "https://example/v1", "kimi-k3")
+    assert (key, using) == ("test-kimi-code-key", False)
+    assert base_url == "https://api.kimi.com/coding/v1"
+    # 开放平台的 kimi-k3 在会员端点不存在，映射为所有会员档位都可调用的
+    # kimi-for-coding，保证兜底开箱即用。
+    assert model == "kimi-for-coding"
+
+
+def test_shim_kimi_code_fallback_honours_kimi_code_model_ids(monkeypatch):
+    monkeypatch.setenv("KIMI_CODE_API_KEY", "test-kimi-code-key")
+    _, _, model, _ = resolve_llm_backend("", "https://example/v1", "k3-256k")
+    assert model == "k3-256k"
 
 
 # --- registry invariants ----------------------------------------------------
@@ -374,6 +412,8 @@ def test_supported_providers_covers_registry_and_aliases():
     assert "gemini" in SUPPORTED_PROVIDERS
     assert "krill" in SUPPORTED_PROVIDERS
     assert "atlascloud" in SUPPORTED_PROVIDERS
+    assert "kimi-coding" in SUPPORTED_PROVIDERS
+    assert "kimi-code" in SUPPORTED_PROVIDERS  # natural product-name alias
 
 
 def test_fallback_key_is_not_reusable_as_a_provider_key(monkeypatch):

@@ -31,6 +31,7 @@ def build_agent(*choices):
     """Create an Agent without constructing a real OpenAI client."""
     instance = WebSearchAgent.__new__(WebSearchAgent)
     instance.verbose = False
+    instance.hosted_search = True
     instance.using_openrouter = False
     instance.trace = []
     instance.conversation_history = []
@@ -71,6 +72,7 @@ def test_reasoning_models_force_supported_temperature():
 
 def test_tool_definition_is_available_for_moonshot_only():
     instance = WebSearchAgent.__new__(WebSearchAgent)
+    instance.hosted_search = True
     instance.using_openrouter = False
     instance._formula_tools = [
         {
@@ -84,12 +86,13 @@ def test_tool_definition_is_available_for_moonshot_only():
 
     assert instance._get_tools() == instance._formula_tools
 
-    instance.using_openrouter = True
+    instance.hosted_search = False
     assert instance._get_tools() == []
 
 
 def test_formula_declaration_is_fetched_and_recorded(monkeypatch):
     instance = WebSearchAgent.__new__(WebSearchAgent)
+    instance.hosted_search = True
     instance.using_openrouter = False
     instance._formula_tools = None
     instance.base_url = "https://api.moonshot.cn/v1"
@@ -116,6 +119,7 @@ def test_formula_declaration_is_fetched_and_recorded(monkeypatch):
 
 def test_formula_fiber_forwards_raw_arguments_and_records_receipt(monkeypatch):
     instance = WebSearchAgent.__new__(WebSearchAgent)
+    instance.hosted_search = True
     instance.using_openrouter = False
     instance.base_url = "https://api.moonshot.cn/v1"
     instance.formula_uri = "moonshot/web-search:latest"

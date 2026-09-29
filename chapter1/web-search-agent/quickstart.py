@@ -43,27 +43,38 @@ def check_api_key():
     if not api_key:
         # 向后兼容：尝试旧的环境变量名
         api_key = os.getenv("KIMI_API_KEY")
-    
-    if not api_key:
-        print_colored("\n⚠️  未检测到 API Key", Colors.WARNING)
-        print("\n请按以下步骤配置:")
-        print("1. 访问 https://platform.moonshot.ai/ 获取 API Key")
-        print("2. 设置环境变量:")
-        print("   export MOONSHOT_API_KEY='your-api-key'")
-        print("   (或使用: export KIMI_API_KEY='your-api-key')")
-        print("\n或者直接输入 API Key (输入 'skip' 跳过):")
-        
-        user_input = input("> ").strip()
-        
-        if user_input.lower() == 'skip':
-            return None
-        elif user_input:
-            return user_input
-        else:
-            return None
-    
-    print_colored("✅ API Key 已配置", Colors.GREEN)
-    return api_key
+
+    if api_key:
+        print_colored("✅ API Key 已配置", Colors.GREEN)
+        return api_key
+
+    # Kimi Code（Kimi 会员订阅）端点：不在此处取值传给 Agent——传了 key 会被
+    # 当作开放平台凭证发往 api.moonshot.cn。返回 None，让 Agent 内部按注册表
+    # 解析到 api.kimi.com/coding/v1。
+    if os.getenv("KIMI_CODE_API_KEY", "").strip():
+        print_colored("✅ 检测到 KIMI_CODE_API_KEY，将使用 Kimi Code 会员端点", Colors.GREEN)
+        print("注意：该端点不含托管 web_search 工具，回答将不联网。")
+        return None
+
+    print_colored("\n⚠️  未检测到 API Key", Colors.WARNING)
+    print("\n请按以下步骤配置:")
+    print("1. 访问 https://platform.moonshot.ai/ 获取 API Key")
+    print("2. 设置环境变量:")
+    print("   export MOONSHOT_API_KEY='your-api-key'")
+    print("   (或使用: export KIMI_API_KEY='your-api-key')")
+    print("3. 或者使用 Kimi Code 会员端点（无实时联网搜索）:")
+    print("   export KIMI_CODE_API_KEY='your-key'")
+    print("   (Key 在 https://www.kimi.com/code/console 创建)")
+    print("\n或者直接输入 API Key (输入 'skip' 跳过，由环境变量兜底):")
+
+    user_input = input("> ").strip()
+
+    if user_input.lower() == 'skip':
+        return None
+    elif user_input:
+        return user_input
+    else:
+        return None
 
 
 def demo_search(agent):
@@ -142,11 +153,9 @@ def main():
     """主函数"""
     print_banner()
     
-    # 检查 API Key
+    # 检查 API Key。返回 None 时不退出：Agent 会按环境变量自行解析
+    # （KIMI_CODE_API_KEY / OPENROUTER_API_KEY 兜底），全部缺失时构造会报错。
     api_key = check_api_key()
-    if not api_key:
-        print_colored("\n⚠️  无法继续，需要配置 API Key", Colors.WARNING)
-        sys.exit(1)
     
     # 创建 Agent
     try:

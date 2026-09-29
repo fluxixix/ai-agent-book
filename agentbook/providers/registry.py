@@ -54,6 +54,20 @@ PROVIDERS: dict[str, Provider] = {
         key_vars=("MOONSHOT_API_KEY", "KIMI_API_KEY"),
         base_url_var="KIMI_BASE_URL",
     ),
+    "kimi-coding": Provider(
+        name="kimi-coding",
+        # Kimi Code（Kimi 会员订阅）的 OpenAI 兼容端点，见
+        # https://www.kimi.com/code/docs/ 。Key 在 Kimi Code 控制台
+        # （https://www.kimi.com/code/console）创建；海外会员走
+        # api.kimi.ai，可用 KIMI_CODE_BASE_URL 覆盖。该端点是编程场景
+        # 的订阅计费，不含开放平台的 Formula 托管 web_search 工具。
+        base_url="https://api.kimi.com/coding/v1",
+        # kimi-for-coding（K2.8 Preview）是会员覆盖面最广的模型档位
+        # （Andante/Plus 及以上）；k3 / k3-256k 需要 Moderato 及以上。
+        default_model="kimi-for-coding",
+        key_vars=("KIMI_CODE_API_KEY",),
+        base_url_var="KIMI_CODE_BASE_URL",
+    ),
     "deepseek": Provider(
         name="deepseek",
         base_url="https://api.deepseek.com",
@@ -123,6 +137,8 @@ PROVIDERS: dict[str, Provider] = {
 # Provider names used interchangeably in the chapters, mapped to canonical ones.
 _ALIASES = {
     "moonshot": "kimi",
+    # The product is branded "Kimi Code"; accept the natural spelling too.
+    "kimi-code": "kimi-coding",
     "ark": "doubao",
     "google": "gemini",
     # "Qwen" is the model family and "Bailian" is the product name; both

@@ -18,11 +18,17 @@ logger = logging.getLogger(__name__)
 
 
 def _reasoning_safe_temperature(model, requested=1.0):
-    """Reasoning models (Kimi K3, GPT-5, ...) only accept temperature=1.
-    Return 1 for those; otherwise the requested value so non-reasoning
-    providers (Doubao, DeepSeek, older Moonshot) are unchanged."""
+    """Reasoning models (Kimi K3 / Kimi Code 模型, GPT-5, ...) only accept
+    temperature=1. Return 1 for those; otherwise the requested value so
+    non-reasoning providers (Doubao, DeepSeek, older Moonshot) are unchanged."""
     m = str(model or "").lower().replace("/", "-")
-    return 1 if ("kimi-k3" in m or "gpt-5" in m) else requested
+    fixed_at_one = (
+        m.startswith("k3")           # Kimi Code: k3 / k3-256k
+        or "kimi-k3" in m            # Kimi 开放平台 kimi-k3
+        or "kimi-for-coding" in m    # Kimi Code: kimi-for-coding(-highspeed)
+        or "gpt-5" in m
+    )
+    return 1 if fixed_at_one else requested
 
 
 # ReAct 轨迹的步骤类型与展示标签（思考 → 行动 → 观察 → 最终答案）
@@ -124,17 +130,29 @@ class WebSearchAgent:
             verbose: 是否实时打印 ReAct 轨迹（思考/行动/观察）
         """
         # 优先使用传入的 api_key，否则从环境变量获取
-        # Moonshot 为主，OpenRouter 为通用兜底（当 MOONSHOT_API_KEY 缺失时启用）
+        # Moonshot 为主，Kimi Code（会员端点）与 OpenRouter 为兜底
         from config import resolve_llm_backend, Config
         primary_key = api_key or os.environ.get("MOONSHOT_API_KEY") or os.environ.get("KIMI_API_KEY")
         resolved_key, resolved_base_url, model, self.using_openrouter = \
             resolve_llm_backend(primary_key, base_url, model)
-        if self.using_openrouter:
+        # Formula（托管 web_search）是 Kimi 开放平台独有的 /formulas/ 接口，
+        # Kimi Code 会员端点（api.kimi.com）与 OpenRouter 都没有，这两种
+        # 模式下模型将仅凭自身知识作答，不做实时联网搜索。
+        self.hosted_search = (not self.using_openrouter) and (
+            "moonshot" in resolved_base_url
+        )
+        if not self.hosted_search:
             logger.info(
-                f"MOONSHOT_API_KEY 未设置，改用 OpenRouter 兜底（模型: {model}）。"
-                "注意：Moonshot Formula web_search 工具在 OpenRouter 上不可用，"
-                "此模式下模型将仅凭自身知识作答，不做实时联网搜索。"
+                f"当前后端（{resolved_base_url}）不提供 Moonshot Formula web_search "
+                "托管工具，模型将仅凭自身知识作答，不做实时联网搜索。"
             )
+        # 供结果 JSON 标注来源：openrouter 兜底 / kimi-coding 会员端点 / 开放平台
+        if self.using_openrouter:
+            self.provider = "openrouter"
+        elif "api.kimi.com" in resolved_base_url:
+            self.provider = "kimi-coding"
+        else:
+            self.provider = "moonshot"
 
         self.client = OpenAI(
             api_key=resolved_key,
@@ -168,7 +186,7 @@ class WebSearchAgent:
         
     def _get_tools(self) -> List[Dict[str, Any]]:
         """Fetch and cache Kimi's authoritative Formula declaration."""
-        if getattr(self, "using_openrouter", False):
+        if not self.hosted_search:
             return []
         if self._formula_tools is not None:
             return self._formula_tools
@@ -231,8 +249,8 @@ class WebSearchAgent:
 
     def _execute_formula(self, name: str, raw_arguments: str) -> str:
         """Execute one Kimi Formula Fiber exactly as the model requested."""
-        if self.using_openrouter:
-            raise RuntimeError("Kimi Formula tools are unavailable on OpenRouter")
+        if not self.hosted_search:
+            raise RuntimeError("Kimi Formula tools are unavailable on this backend")
 
         url = (
             f"{self.base_url.rstrip('/')}/formulas/"

@@ -74,16 +74,22 @@ class Config:
     def validate(cls) -> bool:
         """
         验证配置是否有效
-        
+
         Returns:
             bool: 配置是否有效
         """
-        if not cls.MOONSHOT_API_KEY:
-            print("错误: 未设置 MOONSHOT_API_KEY 环境变量")
-            print("请设置环境变量: export MOONSHOT_API_KEY='your-api-key'")
-            print("(或者使用旧的环境变量名: export KIMI_API_KEY='your-api-key')")
-            return False
-        return True
+        if cls.MOONSHOT_API_KEY:
+            return True
+        # Kimi Code（Kimi 会员订阅）端点：Key 在 https://www.kimi.com/code/console
+        # 创建。该端点不含 Formula 托管搜索，Agent 会退化为仅凭模型知识作答。
+        if os.getenv("KIMI_CODE_API_KEY", "").strip():
+            return True
+        print("错误: 未设置 MOONSHOT_API_KEY 环境变量")
+        print("请设置环境变量: export MOONSHOT_API_KEY='your-api-key'")
+        print("(或者使用旧的环境变量名: export KIMI_API_KEY='your-api-key')")
+        print("(或者使用 Kimi Code 会员端点: export KIMI_CODE_API_KEY='your-key',")
+        print(" Key 在 https://www.kimi.com/code/console 创建，不含实时联网搜索)")
+        return False
     
     @classmethod
     def get_api_key(cls, api_key: Optional[str] = None) -> str:

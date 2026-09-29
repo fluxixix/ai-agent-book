@@ -72,6 +72,8 @@
 | `MOONSHOT_API_KEY` | Moonshot AI API 密钥 | 必填 |
 | `KIMI_API_KEY` | 旧版 API 密钥变量名（向后兼容） | 可选 |
 | `KIMI_BASE_URL` | API 基础 URL | `https://api.moonshot.cn/v1` |
+| `KIMI_CODE_API_KEY` | Kimi Code（Kimi 会员）端点密钥，在 [Kimi Code 控制台](https://www.kimi.com/code/console) 创建 | 可选 |
+| `KIMI_CODE_BASE_URL` | Kimi Code 端点覆盖（海外会员用 `https://api.kimi.ai/coding/v1`） | `https://api.kimi.com/coding/v1` |
 | `DEFAULT_MODEL` | 默认模型 | `kimi-k3` |
 | `MAX_SEARCH_ITERATIONS` | 最大搜索迭代次数（Config 中设置） | 5 |
 | `SEARCH_TIMEOUT` | 单次请求超时（秒），同时作用于 Formula 工具调用与 chat completion | 180 |
@@ -131,9 +133,11 @@ MOONSHOT_API_KEY=your-api-key-here
 
 **注意**: 为了向后兼容，系统也支持使用 `KIMI_API_KEY` 环境变量。
 
+**Kimi Code 会员端点**: 若没有 Moonshot 开放平台 Key，但你是 Kimi 会员，可以在 [Kimi Code 控制台](https://www.kimi.com/code/console) 创建 API Key 并设置 `KIMI_CODE_API_KEY`。请求会改走 Kimi Code 的 OpenAI 兼容端点 `https://api.kimi.com/coding/v1`（海外会员自动可用 `KIMI_CODE_BASE_URL=https://api.kimi.ai/coding/v1` 切换），默认模型映射为 `kimi-for-coding`（K2.8 Preview）；也可以用 `--model k3` / `k3-256k` 选择更高档位（需对应会员等级）。
+
 **通用兜底（OpenRouter）**: 若未设置 `MOONSHOT_API_KEY`/`KIMI_API_KEY` 但设置了 `OPENROUTER_API_KEY`，请求会自动改走 OpenRouter。请求的模型 id 会被映射为 OpenRouter 等价 id（默认的 `kimi-k3` 会变成 `moonshotai/kimi-k2.6`）；仅当**未指定模型**时才使用 `OPENROUTER_MODEL`（默认 `openai/gpt-5.6-luna`）。
 
-**重要限制**：Kimi 内置的 `web_search` 工具是 Moonshot 专有能力，在 OpenRouter 上不可用——因此兜底模式下模型仅凭自身知识作答，**没有实时联网搜索**。如需真正的联网搜索，请使用 Moonshot 主 key。
+**重要限制**：Kimi 内置的 `web_search` 工具是 Moonshot 开放平台专有能力，在 Kimi Code 端点和 OpenRouter 上都不可用——因此这两种模式下模型仅凭自身知识作答，**没有实时联网搜索**。如需真正的联网搜索，请使用 Moonshot 主 key。
 
 #### 3. 运行 Agent
 
@@ -426,6 +430,15 @@ MOONSHOT_API_KEY=your-api-key-here
 
 **Note**: For backward compatibility, `KIMI_API_KEY` is also accepted.
 
+**Kimi Code membership endpoint**: if you have no Moonshot open-platform key
+but do have a Kimi membership, create an API key in the
+[Kimi Code console](https://www.kimi.com/code/console) and set
+`KIMI_CODE_API_KEY`. Requests then go through Kimi Code's OpenAI-compatible
+endpoint `https://api.kimi.com/coding/v1` (overseas memberships: set
+`KIMI_CODE_BASE_URL=https://api.kimi.ai/coding/v1`), with the default model
+mapped to `kimi-for-coding` (K2.8 Preview); pass `--model k3` or `k3-256k`
+for higher tiers (subject to membership level).
+
 **Universal OpenRouter fallback**: if neither `MOONSHOT_API_KEY` nor
 `KIMI_API_KEY` is set but `OPENROUTER_API_KEY` is, requests go through
 OpenRouter. The requested model id is mapped to its OpenRouter equivalent
@@ -570,6 +583,8 @@ Includes:
 | `MOONSHOT_API_KEY` | Moonshot AI API key | required |
 | `KIMI_API_KEY` | Legacy key env name (compat) | optional |
 | `KIMI_BASE_URL` | API base URL | `https://api.moonshot.cn/v1` |
+| `KIMI_CODE_API_KEY` | Kimi Code (Kimi membership) key, created in the [Kimi Code console](https://www.kimi.com/code/console) | optional |
+| `KIMI_CODE_BASE_URL` | Kimi Code endpoint override (overseas: `https://api.kimi.ai/coding/v1`) | `https://api.kimi.com/coding/v1` |
 | `DEFAULT_MODEL` | Default model | `kimi-k3` |
 | `MAX_SEARCH_ITERATIONS` | Max search iterations (in Config) | 5 |
 | `SEARCH_TIMEOUT` | Per-request timeout in seconds, for both the Formula tool call and the chat completion | 180 |

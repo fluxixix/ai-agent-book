@@ -52,6 +52,9 @@ def test_primary_provider_is_preserved_when_its_key_exists():
 
 
 def test_openrouter_is_used_when_primary_key_is_missing(monkeypatch):
+    # load_dotenv() 会把仓库根目录 .env 里的真实 KIMI_CODE_API_KEY 带进测试
+    # 进程；该 key 的兜底优先级高于 OpenRouter，必须先隔离。
+    monkeypatch.delenv("KIMI_CODE_API_KEY", raising=False)
     monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-key")
     monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.test/v1")
 
@@ -78,7 +81,8 @@ def test_gpt5_prefers_openrouter_when_both_keys_exist(monkeypatch):
     )
 
 
-def test_provider_resolution_requires_a_key():
+def test_provider_resolution_requires_a_key(monkeypatch):
+    monkeypatch.delenv("KIMI_CODE_API_KEY", raising=False)
     with pytest.raises(ValueError, match="No API key found"):
         resolve_llm_backend(None, "https://moonshot.test/v1", "kimi-k3")
 
