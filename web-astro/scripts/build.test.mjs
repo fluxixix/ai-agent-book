@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const source = readFileSync(
-  new URL('../../book-en/chapter1.md', import.meta.url),
+  new URL('../../book/chapter1.md', import.meta.url),
   'utf8',
 );
 const editionData = JSON.parse(
@@ -67,14 +67,14 @@ test('Chapter 1 retains its sections, code, tables, figures, and footnotes', () 
   const footnotes = [...source.matchAll(/^\s*(?:>\s*)?\[\^([^\]]+)\]:/gm)].map(
     (match) => match[1],
   );
-  assert.equal(footnotes.length, 9);
+  assert.equal(footnotes.length, 8);
   for (const note of footnotes)
     assert.ok(
       ids(article).has(`user-content-fn-${note}`),
       `Missing footnote ${note}`,
     );
-  assert.match(article, /Thought Questions/);
-  assert.match(article, /Contextual adaptation/);
+  assert.match(article, /思考题/);
+  assert.match(article, /Harness 工程/);
 });
 
 test('All generated pages resolve local assets, links, and fragments', () => {
@@ -124,9 +124,9 @@ test('Chapter figures retain their source content, with Figure 1-1 labels reflow
   );
   for (const image of images) {
     const original = readFileSync(
-      new URL(`../../book-en/${image}`, import.meta.url),
+      new URL(`../../book/${image}`, import.meta.url),
     );
-    const copied = readFileSync(join(dist, 'book-en', image));
+    const copied = readFileSync(join(dist, 'book', image));
     assertFigureContent(copied, original, image);
   }
 });
@@ -184,16 +184,12 @@ test('Each edition renders its original content, figures, language links, and no
           `Missing PDF for ${edition.lang}`,
         );
       const picker = html.match(
-        /<details class="language-picker"[\s\S]*?<\/details>/,
-      )?.[0];
-      assert.ok(picker);
-      for (const target of editions)
-        assert.ok(picker.includes(`href="${target[kind]}"`));
-      if (edition.lang !== 'en') {
-        assert.ok(!html.includes('>My highlights<'));
-        assert.ok(!html.includes('>Text size<'));
-        assert.ok(!html.includes('>Start reading'));
-      }
+        /<span class="language-picker current-language">([^<]*)<\/span>/,
+      )?.[1];
+      assert.equal(picker, edition.name);
+      assert.ok(!html.includes('>My highlights<'));
+      assert.ok(!html.includes('>Text size<'));
+      assert.ok(!html.includes('>Start reading'));
     }
     for (const [, image] of source.matchAll(
       /!\[[^\]]*\]\((images\/[^)]+)\)/g,
@@ -238,8 +234,8 @@ test('Chinese footnotes keep separate citation URLs and translated navigation', 
   }
 });
 
-test('All 15 maintained editions have complete UI catalogs and isolated browser messages', () => {
-  assert.equal(editions.length, 15);
+test('The maintained edition has a complete UI catalog and isolated browser messages', () => {
+  assert.equal(editions.length, 1);
   assert.equal(pages.length, editions.length * (availableChapters.length + 1));
   const catalogs = Object.fromEntries(
     editions.map(({ lang }) => [
@@ -252,7 +248,7 @@ test('All 15 maintained editions have complete UI catalogs and isolated browser 
       ),
     ]),
   );
-  const keys = Object.keys(catalogs.en).sort();
+  const keys = Object.keys(catalogs['zh-CN']).sort();
   for (const edition of editions) {
     const messages = catalogs[edition.lang];
     assert.deepEqual(Object.keys(messages).sort(), keys, edition.lang);
@@ -269,26 +265,8 @@ test('All 15 maintained editions have complete UI catalogs and isolated browser 
           /<script id="book-ui-messages" type="application\/json">([\s\S]*?)<\/script>/,
         )?.[1] ?? 'null',
       );
-      assert.deepEqual(embedded, edition.lang === 'en' ? {} : messages, route);
+      assert.deepEqual(embedded, messages, route);
     }
-  }
-});
-
-test('Arabic citation punctuation stays outside links', () => {
-  const html = pages.find((page) => page.route === editionData.ar.chapter).html;
-  for (const [, href] of html.matchAll(/href="([^"]+)"/g)) {
-    assert.ok(
-      !decodeURI(href).endsWith('،'),
-      `Punctuation absorbed into URL: ${href}`,
-    );
-  }
-  for (const href of [
-    'https://www.drjoshcsimmons.com/writing/we-are-entering-the-graph-engineering-phase',
-    'https://x.com/steipete/status/2078277297791189132',
-    'https://docs.langchain.com/oss/python/langgraph/overview',
-    'https://learn.microsoft.com/en-us/agent-framework/workflows/',
-  ]) {
-    assert.ok(html.includes(`href="${href}"`));
   }
 });
 
@@ -319,16 +297,11 @@ test('Chapter 1 language section links resolve and round-trip across editions', 
   }
 });
 
-test('Chinese homepage is the default and machine options are clearly separate', () => {
+test('Chinese homepage is the only site entry', () => {
   assert.ok(
     readFileSync(join(dist, 'index.html'), 'utf8').includes('lang="zh-CN"'),
   );
-  assert.ok(
-    readFileSync(join(dist, 'en/index.html'), 'utf8').includes('lang="en"'),
-  );
   for (const { html } of pages) {
-    assert.equal([...html.matchAll(/data-machine-language=/g)].length, 21);
-    assert.ok(html.includes('未经审核 / Not vetted'));
     assert.ok(!html.includes('<script src="https://cdn.staticfile.net'));
   }
 });
@@ -380,7 +353,7 @@ test('Chapter 2 preserves all editions, figures, outlines, and chapter isolation
     );
     assert.ok(Object.keys(mappings).length >= 40);
     for (const translations of Object.values(mappings)) {
-      assert.equal(Object.keys(translations).length, 15);
+      assert.equal(Object.keys(translations).length, 1);
       for (const target of editions) {
         const targetHtml = readFileSync(
           join(
@@ -397,28 +370,19 @@ test('Chapter 2 preserves all editions, figures, outlines, and chapter isolation
 });
 
 test('Chapter 2 visual replacements preserve originals and highlight teaching examples', () => {
-  const html = readFileSync(join(dist, 'book-en/chapter2/index.html'), 'utf8');
-  assert.equal([...html.matchAll(/data-language="jsonc"/g)].length, 6);
-  assert.equal(
-    [...html.matchAll(/data-language="agent-pseudocode"/g)].length,
-    4,
-  );
-  assert.equal(
-    [...html.matchAll(/data-language="agent-instructions"/g)].length,
-    2,
-  );
+  const html = readFileSync(join(dist, 'book/chapter2/index.html'), 'utf8');
   assert.ok(
     html.includes('color:#9DA7B3'),
     'Explanatory comments use readable contrast',
   );
   const heatmap = readFileSync(
-    join(dist, 'figures/chapter2-en/fig2-7-web.svg'),
+    join(dist, 'figures/book/book/fig2-7-light.svg'),
     'utf8',
   );
   const embedded = heatmap.match(/data:image\/png;base64,([^"\s]+)/)[1];
   assert.deepEqual(
     Buffer.from(embedded, 'base64'),
-    readFileSync(new URL('../../book-en/images/fig2-7.png', import.meta.url)),
+    readFileSync(new URL('../../book/images/fig2-7.png', import.meta.url)),
   );
 });
 
@@ -747,21 +711,6 @@ for (const chapterNumber of [3, 4, 5, 6, 7, 8, 9, 10])
             assert.ok(html.includes(`data-figure-${theme}="${paths[theme]}"`));
           }
         }
-      }
-      if (edition.lang === 'en' && chapterNumber === 3) {
-        assert.equal(
-          (article.match(/data-language="book-example"/g) || []).length,
-          3,
-        );
-        assert.equal(
-          (article.match(/data-language="book-tree"/g) || []).length,
-          1,
-        );
-        assert.equal(
-          (article.match(/data-language="python"/g) || []).length,
-          5,
-        );
-        assert.ok(article.includes('Python-style pseudocode'));
       }
       assert.equal(count(article, 'img'), images.length, edition.lang);
       assert.equal(count(article, 'h3'), headings.length, edition.lang);

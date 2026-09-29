@@ -496,7 +496,7 @@ python main.py --mode ablation --ablation-modes full no_history --output my_abla
 > Multi-provider context-aware agent with systematic ablation of context components (history, reasoning, tool calls, tool results).
 > 配套《深入理解 AI Agent》第 1 章 **实验 1-1 ★★：上下文的关键作用**。
 
-← [Chapter 1 index / 返回第 1 章目录](../README.md) · 📖 [Read the chapter / 读本章正文](../../book/chapter1.md)（[EN](../../book-en/chapter1.md)）
+← [Chapter 1 index / 返回第 1 章目录](../README.md) · 📖 [Read the chapter / 读本章正文](../../book/chapter1.md)
 
 ---
 

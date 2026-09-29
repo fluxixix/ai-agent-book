@@ -74,16 +74,6 @@ export function bookMarkdown({ base = '/' } = {}) {
           return parts;
         });
 
-      // Style the Chapter 3 teaching transcripts without rewriting source text.
-      if (
-        node.type === 'code' &&
-        directory === 'book-en' &&
-        /chapter3\.md$/.test(file.path)
-      ) {
-        if (/^(User:|Extracted memories:|Query tokens:)/.test(node.value))
-          node.lang = 'book-example';
-        if (node.value.startsWith('viking://')) node.lang = 'book-tree';
-      }
       // The localized Chapter 5 tool trace mixes narration with tool calls.
       if (
         node.type === 'code' &&

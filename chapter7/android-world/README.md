@@ -198,7 +198,7 @@ Evaluator 失败属于直接实验结果，必须保留；只有运行时 error 
 > Companion material for *AI Agents in Depth*, Chapter 7 — **Experiment 7-12: Evaluate and improve on AndroidWorld**.
 > 配套《深入理解 AI Agent》第 7 章 **实验 7-12 ★★★：AndroidWorld 的评估和改进**。
 
-← [Chapter 7 index / 返回第 7 章目录](../README.md) · 📖 [Read the chapter / 读本章正文](../../book/chapter7.md)（[EN](../../book-en/chapter7.md)）
+← [Chapter 7 index / 返回第 7 章目录](../README.md) · 📖 [Read the chapter / 读本章正文](../../book/chapter7.md)
 
 ---
 

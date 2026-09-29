@@ -550,9 +550,6 @@ const outline = getHeadings().filter(
     const languageLinks = Array.from(
       document.querySelectorAll<HTMLAnchorElement>('.language-picker a'),
     );
-    const machineLanguageLinks = Array.from(
-      document.querySelectorAll<HTMLAnchorElement>('[data-machine-language]'),
-    );
     const dialogLinks = Array.from(
       document.querySelectorAll<HTMLAnchorElement>('.dialog-outline a'),
     );
@@ -593,15 +590,6 @@ const outline = getHeadings().filter(
         const slug =
           active >= 0
             ? languageSections[sections[active]?.id ?? '']?.[link.lang]
-            : undefined;
-        const url = new URL(link.href);
-        url.hash = slug ?? '';
-        link.href = url.href;
-      });
-      machineLanguageLinks.forEach((link) => {
-        const slug =
-          active >= 0
-            ? languageSections[sections[active]?.id ?? '']?.en
             : undefined;
         const url = new URL(link.href);
         url.hash = slug ?? '';

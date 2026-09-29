@@ -14,22 +14,12 @@ mkdir -p "$DEST"
 # Site homepage (root index.md).
 cp "$ROOT/index.md" "$DEST/index.md"
 
-# Translated site homepages (root index.<lang>.md), when present. The
-# language switcher maps home <-> home for these editions (see
-# scripts/site_i18n.py, which lists them in the generated catalog).
-for home in "$ROOT"/index.*.md; do
-  [ -f "$home" ] || continue
-  cp "$home" "$DEST/$(basename "$home")"
-done
-
 # robots.txt at the site root (points crawlers at the auto-generated sitemap).
 [ -f "$ROOT/robots.txt" ] && cp "$ROOT/robots.txt" "$DEST/robots.txt"
 
-# The language editions, each with its images/ subfolder.
-for lang in book book-en book-es book-id book-ru book-ta book-vi book-zhtw book-ja book-ar book-tr book-ko book-hu book-he book-ptbr; do
-  mkdir -p "$DEST/$lang"
-  cp -R "$ROOT/$lang" "$DEST/"
-done
+# The book edition, with its images/ subfolder.
+mkdir -p "$DEST/book"
+cp -R "$ROOT/book" "$DEST/"
 
 # Promote each chapter of the default (zh) edition to a directory index
 # (book/chapterN.md -> book/chapterN/index.md) so mkdocs.yml can use
@@ -37,8 +27,7 @@ done
 # clicking a chapter title in the sidebar then opens the chapter directly.
 # The rendered URL is unchanged (/book/chapterN/, thanks to directory
 # URLs). The file now lives one directory deeper, so its relative image
-# references need a ../ prefix. Translated editions stay flat files: they
-# are not listed in the nav, so they gain nothing from the promotion.
+#   references need a ../ prefix.
 for n in 1 2 3 4 5 6 7 8 9 10; do
   src="$DEST/book/chapter$n.md"
   [ -f "$src" ] || continue
@@ -61,8 +50,7 @@ for ch in chapter1 chapter2 chapter3 chapter4 chapter5 \
   fi
 done
 
-# Copy site-level assets (JS/CSS for the language switcher) that MkDocs
-# resolves relative to docs_dir.
+# Copy site-level assets (JS/CSS) that MkDocs resolves relative to docs_dir.
 cp -R "$ROOT/extras" "$DEST/extras"
 
 # Site-wide static assets — logo, favicon, social OG images. Referenced by
@@ -109,26 +97,6 @@ find "$DEST/chapter"* -type f -name '*.md' -print0 \
       -e 's|\.\./book/\([a-zA-Z0-9_-]*\)\.md|../book/\1/|g' \
       -e 's|\.\./README\.md|../|g'
 # macOS sed needs the backup suffix above; clean up the .bak files.
-find "$DEST" -name '*.md.bak' -delete
-
-# Per-language experiment index pages (chapterN/README.<lang>.md) contain
-# relative links like [exp](local_llm_serving/) that resolve correctly on
-# the Chinese URL /chapterN/ but break on the translated URL
-# /chapterN/README.<lang>/ (they'd resolve to /chapterN/README.<lang>/exp/,
-# which 404s). Rewrite those relative links to be relative to /chapterN/
-# by prefixing ../ — this makes them resolve to /chapterN/<exp>/ in any
-# language edition.
-#
-# Only touches README.<lang>.md (not README.md, where the links already work),
-# and only relative links that don't start with . / # http or contain :
-#
-# The "back to main README" links ](../docs/<locale>/README.md) point into
-# docs/, which is never copied into the site's docs_dir — MkDocs leaves the
-# raw href and it 404s. Map them to ../../ (the site home) instead.
-find "$DEST/chapter"* -type f -name 'README.[a-zA-Z-]*.md' -print0 \
-  | xargs -0 sed -i.bak -E \
-      -e 's|\]\(([a-zA-Z][a-zA-Z0-9_-]*)/\)|](../\1/)|g' \
-      -e 's|\]\(\.\./docs/[a-zA-Z-]+/README\.md\)|](../../)|g'
 find "$DEST" -name '*.md.bak' -delete
 
 echo "Assembled docs into $DEST"

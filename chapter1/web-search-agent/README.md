@@ -244,7 +244,7 @@ python examples.py
 > Autonomous ReAct web-search agent on Kimi K3 using Moonshot's official Formula API (multi-round search + synthesis).
 > 配套《深入理解 AI Agent》第 1 章 **实验 1-2 ★：Kimi K3 原生 Agent 能力**。
 
-← [Chapter 1 index / 返回第 1 章目录](../README.md) · 📖 [Read the chapter / 读本章正文](../../book/chapter1.md)（[EN](../../book-en/chapter1.md)）
+← [Chapter 1 index / 返回第 1 章目录](../README.md) · 📖 [Read the chapter / 读本章正文](../../book/chapter1.md)
 
 ---
 

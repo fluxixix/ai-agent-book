@@ -116,20 +116,14 @@ test('paired prose prices stay literal across the source editions', async () => 
   }
 
   assert.ok(
-    priceSpans > 20,
-    'Expected real paired-price examples in the books',
+    priceSpans > 3,
+    'Expected real paired-price examples in the book',
   );
 });
 
-test('the rendered English chapters use KaTeX for formulas and text for prices', async () => {
-  const chapter8 = chapter(
-    editions.find(({ directory }) => directory === 'book-en'),
-    8,
-  );
-  const chapter2 = chapter(
-    editions.find(({ directory }) => directory === 'book-en'),
-    2,
-  );
+test('the rendered chapters use KaTeX for formulas and text for prices', async () => {
+  const chapter8 = chapter(editions[0], 8);
+  const chapter2 = chapter(editions[0], 2);
   const [mathHtml, moneyHtml] = await Promise.all([
     htmlProcessor.process({
       path: chapter8.path,
@@ -149,10 +143,10 @@ test('the rendered English chapters use KaTeX for formulas and text for prices',
       `Missing rendered formula ${expression}`,
     );
 
-  assert.match(String(moneyHtml), /billed at \$0\.05 per minute/);
-  assert.match(String(moneyHtml), /rises to \$180 next year/);
+  assert.match(String(moneyHtml), /\$0\.05 计费/);
+  assert.match(String(moneyHtml), /明年涨到 \$180/);
   assert.doesNotMatch(
     String(moneyHtml),
-    /<annotation encoding="application\/x-tex">0\.05 per minute/,
+    /<annotation encoding="application\/x-tex">0\.05/,
   );
 });

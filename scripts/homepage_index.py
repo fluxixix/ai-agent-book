@@ -99,12 +99,9 @@ def on_page_markdown(markdown: str, page, config, **kwargs):
     """Expand the homepage template; never rewrite checked-in source files."""
     if MARKER not in markdown:
         return markdown
-    source = page.file.src_uri
-    match = re.fullmatch(r"index(?:\.([\w-]+))?\.md", source)
-    if not match or markdown.count(MARKER) != 1:
-        raise ValueError(f"Unexpected homepage marker in {source}")
-    code = match[1] or "zh"
+    if page.file.src_uri != "index.md" or markdown.count(MARKER) != 1:
+        raise ValueError(f"Unexpected homepage marker in {page.file.src_uri}")
     root = Path(config["config_file_path"]).resolve().parent
-    cards = render_cards(root, config["extra"]["languages"][code],
-                         chapter_order(config["nav"]), translated=bool(match[1]))
+    cards = render_cards(root, {"prefix": "book/"}, chapter_order(config["nav"]),
+                         translated=False)
     return markdown.replace(MARKER, cards)

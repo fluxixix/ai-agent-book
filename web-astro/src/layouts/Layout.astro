@@ -45,10 +45,6 @@ const t = translator(locale);
   <body class:list={[{ 'reader-page': reader }]}>
     <a class="skip-link" href="#main-content">{t('Skip to content')}</a>
     <slot />
-    <script>
-      import { initMachineTranslation } from '../scripts/machine-translation';
-      initMachineTranslation();
-    </script>
     <script
       is:inline
       id="book-ui-messages"

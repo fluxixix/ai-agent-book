@@ -11,24 +11,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_every_homepage_uses_current_manuscript_titles_and_valid_links():
-    # The lightweight registry CI does not install site-build dependencies.
     yaml = pytest.importorskip("yaml")
     config = yaml.load((ROOT / 'mkdocs.yml').read_text(), Loader=yaml.BaseLoader)
     config['config_file_path'] = str(ROOT / 'mkdocs.yml')
-    for home in [ROOT / 'index.md', *ROOT.glob('index.*.md')]:
-        page = SimpleNamespace(file=SimpleNamespace(src_uri=home.name))
-        rendered = on_page_markdown(home.read_text(), page, config)
-        code = home.name.split('.')[1] if home.name != 'index.md' else 'zh'
-        language = config['extra']['languages'][code]
-        assert MARKER not in rendered
-        assert rendered.count('class="exp-card"') == 13
-        for number in range(1, 11):
-            source = ROOT / language['prefix'] / f"chapter{number}{language.get('suffix', '')}.md"
-            title, _ = read_headings(source)
-            import html
-            assert html.escape(f'{number} · {title}') in rendered
-            relative = '../' if code != 'zh' else ''
-            assert f'href="{relative}{language["prefix"]}chapter{number}{language.get("suffix", "")}/"' in rendered
+    home = ROOT / 'index.md'
+    page = SimpleNamespace(file=SimpleNamespace(src_uri='index.md'))
+    rendered = on_page_markdown(home.read_text(), page, config)
+    assert MARKER not in rendered
+    assert rendered.count('class="exp-card"') == 13
+    for number in range(1, 11):
+        source = ROOT / 'book' / f'chapter{number}.md'
+        title, _ = read_headings(source)
+        import html
+        assert html.escape(f'{number} · {title}') in rendered
+        assert f'href="book/chapter{number}/"' in rendered
 
 
 def test_manuscript_edit_and_navigation_order_flow_into_cards(tmp_path):
